@@ -26,8 +26,11 @@ export default function Home(props) {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://newsapi.org/v2/everything?q=${props.menu ? props.menu : "All"}&apiKey=a5abcd8c307c435c94808c00aacce87b`
+        `https://newsapi.org/v2/everything?q=${props.menu || "All"}&apiKey=${
+          import.meta.env.VITE_NEWS_API_KEY
+        }`
       );
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -105,7 +108,12 @@ export default function Home(props) {
                 }}
                 transition={{ duration: 0.15 }}
               >
-                <a href={data.url} target="_blank" rel="noopener noreferrer" className="block">
+                <a
+                  href={data.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
                   <img
                     className="rounded-t-lg w-full h-48 object-cover"
                     src={
@@ -116,7 +124,12 @@ export default function Home(props) {
                   />
                 </a>
                 <div className="p-5 flex flex-col flex-grow">
-                  <a href={data.url} target="_blank" rel="noopener noreferrer" className="block">
+                  <a
+                    href={data.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
                     <motion.h5
                       key={`${currentPage}-${index}`}
                       className="mb-2 text-2xl font-bold tracking-tight text-white dark:text-white"
@@ -248,7 +261,9 @@ export default function Home(props) {
             <li>
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === Math.ceil(filteredNews.length / cardsPerPage)}
+                disabled={
+                  currentPage === Math.ceil(filteredNews.length / cardsPerPage)
+                }
                 className={`flex items-center justify-center px-4 h-10 leading-tight text-white bg-slate-900 border border-white border-solid rounded-e-lg hover:bg-slate-950 hover:text-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
                   currentPage === Math.ceil(filteredNews.length / cardsPerPage)
                     ? "cursor-not-allowed"
