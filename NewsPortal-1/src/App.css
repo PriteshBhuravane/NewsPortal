@@ -1,0 +1,38 @@
+/* Global styles for the NewsPortal application */
+
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #1e293b; /* Dark background */
+  color: #ffffff; /* Light text color */
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff; /* White color for headings */
+}
+
+a {
+  color: #3b82f6; /* Blue color for links */
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline; /* Underline on hover */
+}
+
+button {
+  cursor: pointer;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.footer {
+  background-color: #0f172a; /* Dark footer background */
+  padding: 20px;
+  text-align: center;
+}
