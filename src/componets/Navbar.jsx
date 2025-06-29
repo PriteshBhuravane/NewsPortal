@@ -11,17 +11,9 @@ const Navbar = (props) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const closeDropdown = () => {
-    setIsDropdownOpen(false);
-  };
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
+  const closeDropdown = () => setIsDropdownOpen(false);
 
   const navigate = useNavigate();
 
@@ -40,11 +32,8 @@ const Navbar = (props) => {
         closeDropdown();
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const dropdownVariants = {
@@ -91,6 +80,7 @@ const Navbar = (props) => {
           </span>
         </a>
         <div className="flex md:order-2">
+          {/* Desktop Search */}
           <div className="relative hidden md:block">
             <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
               <svg
@@ -115,6 +105,7 @@ const Navbar = (props) => {
               id="search-navbar"
               className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-600 rounded-lg bg-gray-700 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-white"
               placeholder="Search..."
+              value={props.search}
               onChange={(e) => props.setSearch(e.target.value)}
             />
           </div>
@@ -130,6 +121,7 @@ const Navbar = (props) => {
             </Link>
           )}
 
+          {/* Mobile Menu Button */}
           <button
             data-collapse-toggle="navbar-search"
             type="button"
@@ -156,12 +148,14 @@ const Navbar = (props) => {
             </svg>
           </button>
         </div>
+        {/* Mobile Menu */}
         <div
           className={`items-center justify-between ${
             isMenuOpen ? "block" : "hidden"
           } w-full md:flex md:w-auto md:order-1`}
           id="navbar-search"
         >
+          {/* Mobile Search */}
           <div className="relative mt-3 md:hidden">
             <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
               <svg
@@ -185,6 +179,7 @@ const Navbar = (props) => {
               id="search-navbar"
               className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-600 rounded-lg bg-gray-700 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 text-white"
               placeholder="Search..."
+              value={props.search}
               onChange={(e) => props.setSearch(e.target.value)}
             />
           </div>
@@ -194,6 +189,7 @@ const Navbar = (props) => {
               <a
                 onClick={() => {
                   props.setMenu("All");
+                  props.setSearch("");
                   closeDropdown();
                 }}
                 href="/"
@@ -207,6 +203,7 @@ const Navbar = (props) => {
               <a
                 onClick={() => {
                   props.setMenu("All");
+                  props.setSearch("");
                   closeDropdown();
                 }}
                 href="/"
@@ -236,6 +233,7 @@ const Navbar = (props) => {
                         key={category}
                         onClick={() => {
                           props.setMenu(category);
+                          props.setSearch("");
                           closeDropdown();
                         }}
                         variants={itemVariants}

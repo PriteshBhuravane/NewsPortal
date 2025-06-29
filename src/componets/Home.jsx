@@ -9,7 +9,8 @@ export default function Home(props) {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [cardsPerPage] = useState(10);
+  const [cardsPerPage, setCardsPerPage] = useState(10);
+  const [error, setError] = useState("");
 
   const { favorites, addFavorite, removeFavorite } = useFavorites();
 
@@ -19,26 +20,41 @@ export default function Home(props) {
     } else {
       addFavorite(post);
     }
-    console.log("Current favorites after action:", favorites);
   };
 
+  // Fetch news with error handling and pagination
   const getNews = async () => {
     setLoading(true);
+    setError("");
+    let allResults = [];
+    let nextPage = null;
+    let pageCount = 0;
+    const maxPages = 3;
+
     try {
-      const response = await fetch(
-        `https://newsdata.io/api/1/latest?apikey=${
-          import.meta.env.VITE_NEWSDATA_API_KEY
-        }&q=${props.menu || "All"}&language=en`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const json = await response.json();
-      setNews(json.results);
+      do {
+        let url = `https://newsdata.io/api/1/latest?apikey=${import.meta.env.VITE_NEWSDATA_API_KEY}&q=${props.menu || "All"}&language=en`;
+        if (nextPage) url += `&page=${nextPage}`;
+        const response = await fetch(url);
+        const json = await response.json();
+        if (Array.isArray(json.results)) {
+          allResults = allResults.concat(json.results);
+          nextPage = json.nextPage;
+          pageCount++;
+        } else {
+          setError(
+            json.status === "error"
+              ? `API Error: ${json.message || "Too many requests. Please try again later."}`
+              : "Unexpected API response."
+          );
+          break;
+        }
+      } while (nextPage && pageCount < maxPages);
+      setNews(allResults);
+      setError("");
     } catch (error) {
-      console.error("Error fetching news:", error);
+      setNews([]);
+      setError("Error fetching news: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -48,9 +64,15 @@ export default function Home(props) {
     getNews();
   }, [props.menu]);
 
-  const filteredNews = news.filter((data) =>
-    data.title?.toLowerCase().includes(props.search.toLowerCase())
-  );
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [cardsPerPage, props.menu, props.search]);
+
+  const filteredNews = Array.isArray(news)
+    ? news.filter((data) =>
+        data.title?.toLowerCase().includes(props.search.toLowerCase())
+      )
+    : [];
 
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
@@ -61,7 +83,10 @@ export default function Home(props) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const totalPages = Math.max(1, Math.ceil(filteredNews.length / cardsPerPage));
   const latestNewsText = "Latest News".split("");
+  const truncate = (str, n) =>
+    str && str.length > n ? str.slice(0, n) + "..." : str;
 
   return (
     <div className="min-h-screen">
@@ -78,6 +103,28 @@ export default function Home(props) {
         ))}
       </motion.h1>
 
+      {error && (
+        <div className="text-red-500 text-center my-4">{error}</div>
+      )}
+
+      <div className="flex justify-end items-center px-10 pt-4">
+        <label htmlFor="cardsPerPage" className="text-white mr-2">
+          Cards per page:
+        </label>
+        <select
+          id="cardsPerPage"
+          value={cardsPerPage}
+          onChange={(e) => setCardsPerPage(Number(e.target.value))}
+          className="rounded px-2 py-1 bg-slate-800 text-white border border-gray-400"
+        >
+          {[5, 10, 15, 20].map((num) => (
+            <option key={num} value={num}>
+              {num}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="p-5 px-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {loading ? (
           <div className="col-span-full text-center text-white">Loading...</div>
@@ -93,7 +140,7 @@ export default function Home(props) {
           currentCards.map((data, index) => (
             <motion.div
               key={index}
-              className="max-w-sm bg-black border border-gray-200 rounded-lg flex flex-col relative"
+              className="max-w-sm h-[480px] bg-black border border-gray-200 rounded-lg flex flex-col relative"
               whileHover={{
                 scale: 1.05,
                 boxShadow: "0 0 20px rgba(255, 255, 255, 0.5)",
@@ -124,31 +171,21 @@ export default function Home(props) {
                 >
                   <motion.h5
                     key={`${currentPage}-${index}`}
-                    className="mb-2 text-2xl font-bold tracking-tight text-white"
+                    className="mb-2 text-2xl font-bold tracking-tight text-white line-clamp-2"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
+                    title={data.title}
                   >
                     {data.title
-                      ? data.title.split("").map((letter, letterIndex) => (
-                          <motion.span
-                            key={letterIndex}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{
-                              duration: 0.2,
-                              delay: letterIndex * 0.04,
-                            }}
-                          >
-                            {letter}
-                          </motion.span>
-                        ))
+                      ? truncate(data.title, 80)
                       : "Untitled"}
                   </motion.h5>
                 </a>
-                <p className="mb-3 font-normal text-gray-400 overflow-ellipsis">
-                  {data.description ||
-                    "No description available for this article."}
+                <p className="mb-3 font-normal text-gray-400 overflow-hidden line-clamp-3">
+                  {data.description
+                    ? truncate(data.description, 120)
+                    : "No description available for this article."}
                 </p>
                 <motion.a
                   href={data.link}
@@ -198,78 +235,76 @@ export default function Home(props) {
       {/* Pagination */}
       <nav
         aria-label="Page navigation example"
-        className="mt-4 flex justify-center"
+        className="mt-4 flex flex-col items-center justify-center"
       >
+        <span className="text-white mb-2">
+          Page {currentPage} of {totalPages}
+        </span>
         <ul className="flex items-center -space-x-px h-10 text-base">
+          <li>
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className={`px-3 h-10 text-white bg-slate-900 border border-gray-400 rounded-s-lg ${
+                currentPage === 1 ? "cursor-not-allowed" : "hover:bg-slate-950"
+              }`}
+              title="First"
+            >
+              &#171;
+            </button>
+          </li>
           <li>
             <button
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-4 h-10 ms-0 leading-tight text-white bg-slate-900 border border-gray-400 rounded-s-lg ${
+              className={`px-3 h-10 text-white bg-slate-900 border border-gray-400 ${
                 currentPage === 1 ? "cursor-not-allowed" : "hover:bg-slate-950"
               }`}
+              title="Previous"
             >
-              <svg
-                className="w-3 h-3 rtl:rotate-180"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 6 10"
-              >
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 1 1 5l4 4"
-                />
-              </svg>
+              &#8249;
             </button>
           </li>
 
-          {Array.from(
-            { length: Math.ceil(filteredNews.length / cardsPerPage) },
-            (_, i) => (
-              <li key={i}>
-                <button
-                  onClick={() => paginate(i + 1)}
-                  className={`px-4 h-10 text-white bg-slate-700 border border-white hover:bg-slate-800 ${
-                    currentPage === i + 1 ? "text-2xl bg-gray-900" : ""
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              </li>
-            )
-          )}
+          {Array.from({ length: totalPages }, (_, i) => (
+            <li key={i}>
+              <button
+                onClick={() => paginate(i + 1)}
+                className={`px-4 h-10 text-white bg-slate-700 border border-white hover:bg-slate-800 ${
+                  currentPage === i + 1 ? "text-2xl bg-gray-900" : ""
+                }`}
+              >
+                {i + 1}
+              </button>
+            </li>
+          ))}
 
           <li>
             <button
               onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={
-                currentPage === Math.ceil(filteredNews.length / cardsPerPage)
-              }
-              className={`px-4 h-10 text-white bg-slate-900 border border-white rounded-e-lg ${
-                currentPage === Math.ceil(filteredNews.length / cardsPerPage)
+              disabled={currentPage === totalPages}
+              className={`px-3 h-10 text-white bg-slate-900 border border-white ${
+                currentPage === totalPages
                   ? "cursor-not-allowed"
                   : "hover:bg-slate-950"
               }`}
+              title="Next"
             >
-              <svg
-                className="w-3 h-3 rtl:rotate-180"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 6 10"
-              >
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="m1 9 4-4-4-4"
-                />
-              </svg>
+              &#8250;
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className={`px-3 h-10 text-white bg-slate-900 border border-white rounded-e-lg ${
+                currentPage === totalPages
+                  ? "cursor-not-allowed"
+                  : "hover:bg-slate-950"
+              }`}
+              title="Last"
+            >
+              &#187;
             </button>
           </li>
         </ul>
